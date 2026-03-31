@@ -65,11 +65,17 @@ def get_geometry(
 ) -> Union[Polygon, LineString]:
     """Get GeoJSON type geometry from napari shape."""
     if shape_type in ["rectangle", "polygon"]:
+        # Close the ring per GeoJSON spec (RFC 7946 §3.1.6)
+        if coords[0] != coords[-1]:
+            coords = coords + [coords[0]]
         shape = Polygon(coords)
     elif shape_type in ["line", "path"]:
         shape = LineString(coords)
     elif shape_type == "ellipse":
-        shape = Polygon(ellipse_to_polygon(coords))
+        poly_coords = ellipse_to_polygon(coords)
+        if poly_coords[0] != poly_coords[-1]:
+            poly_coords = poly_coords + [poly_coords[0]]
+        shape = Polygon(poly_coords)
     else:
         raise ValueError(f"Shape type `{shape_type}` not supported.")
     if flipxy:
