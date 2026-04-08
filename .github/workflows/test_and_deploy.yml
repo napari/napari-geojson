@@ -19,6 +19,8 @@ jobs:
   test:
     name: ${{ matrix.platform }} py${{ matrix.python-version }}
     runs-on: ${{ matrix.platform }}
+    permissions:
+      id-token: write  # needed for codecov OIDC authentication
     strategy:
       matrix:
         platform: [ubuntu-latest, windows-latest, macos-latest]
