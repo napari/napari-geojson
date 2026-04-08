@@ -10,6 +10,8 @@ license = "BSD-3-Clause"
 requires-python = ">=3.8"
 authors = [
     { name = "Tim Morello", email = "tdmorello@gmail.com" },
+    { name = "napari team", email = "napari-steering-council@googlegroups.com" },
+    { name = "napari-geojson contributors" },
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
