@@ -1,15 +1,15 @@
 # napari-geojson
 
-[![License](https://img.shields.io/pypi/l/napari-geojson.svg?color=green)](https://github.com/tdmorello/napari-geojson/raw/main/LICENSE)
+[![License](https://img.shields.io/pypi/l/napari-geojson.svg?color=green)](https://github.com/napari/napari-geojson/raw/main/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-geojson.svg?color=green)](https://pypi.org/project/napari-geojson)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-geojson.svg?color=green)](https://python.org)
-[![tests](https://github.com/tdmorello/napari-geojson/workflows/tests/badge.svg)](https://github.com/tdmorello/napari-geojson/actions)
-[![codecov](https://codecov.io/gh/tdmorello/napari-geojson/branch/main/graph/badge.svg)](https://codecov.io/gh/tdmorello/napari-geojson)
+[![tests](https://github.com/napari/napari-geojson/workflows/tests/badge.svg)](https://github.com/napari/napari-geojson/actions)
+[![codecov](https://codecov.io/gh/napari/napari-geojson/branch/main/graph/badge.svg)](https://codecov.io/gh/napari/napari-geojson)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-geojson)](https://napari-hub.org/plugins/napari-geojson)
 
 Read and write geojson files in napari.
 
-![](https://github.com/tdmorello/napari-geojson/raw/main/resources/output.gif)
+![](https://github.com/napari/napari-geojson/raw/main/resources/output.gif)
 
 ----------------------------------
 
@@ -33,7 +33,7 @@ You can install `napari-geojson` via [pip]:
 
 To install latest development version :
 
-    pip install git+https://github.com/tdmorello/napari-geojson.git
+    pip install git+https://github.com/napari/napari-geojson.git
 
 
 ## Contributing
@@ -61,7 +61,7 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [Mozilla Public License 2.0]: https://www.mozilla.org/media/MPL/2.0/index.txt
 [cookiecutter-napari-plugin]: https://github.com/napari/cookiecutter-napari-plugin
 
-[file an issue]: https://github.com/tdmorello/napari-geojson/issues
+[file an issue]: https://github.com/napari/napari-geojson/issues
 
 [napari]: https://github.com/napari/napari
 [tox]: https://tox.readthedocs.io/en/latest/
