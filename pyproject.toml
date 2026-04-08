@@ -1,14 +1,99 @@
 [build-system]
-requires = ["setuptools>=42.0.0", "wheel", "setuptools_scm"]
+requires = ["setuptools>=77.0.3", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "napari-geojson"
+description = "Read and write geojson files in napari"
+readme = "README.md"
+license = "BSD-3-Clause"
+requires-python = ">=3.8"
+authors = [
+    { name = "Tim Morello", email = "tdmorello@gmail.com" },
+    { name = "napari team", email = "napari-steering-council@googlegroups.com" },
+    { name = "napari-geojson contributors" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: napari",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+dynamic = ["version"]
+dependencies = [
+    "geojson",
+    "numpy",
+]
+
+[project.urls]
+homepage = "https://github.com/tdmorello/napari-geojson"
+repository = "https://github.com/tdmorello/napari-geojson"
+
+
+[project.entry-points."napari.manifest"]
+napari-geojson = "napari_geojson:napari.yaml"
+
+[dependency-groups]
+dev = [
+    "mypy",
+    "pre-commit",
+    "pytest",
+    "pytest-cov",
+    "pytest-qt",
+    "ruff",
+    "tox",
+    { include-group = "testing" },
+]
+testing = [
+    "napari[all]",
+    "pytest",
+    "pytest-cov",
+    "pytest-qt",
+    "tox",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
 
 [tool.setuptools_scm]
 write_to = "src/napari_geojson/_version.py"
 
-[tool.black]
-line-length = 79
+[tool.ruff]
+line-length = 88
+fix = true
 
-[tool.isort]
-profile = "black"
-line_length = 79
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "W",   # pycodestyle warnings
+    "D",   # pydocstyle
+]
+ignore = [
+    "E203", # whitespace before ':'  (matches prior flake8 config)
+    "E501", # line too long. handled by formatter
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["napari_geojson"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
