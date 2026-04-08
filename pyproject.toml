@@ -37,8 +37,8 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://github.com/tdmorello/napari-geojson"
-repository = "https://github.com/tdmorello/napari-geojson"
+homepage = "https://github.com/napari/napari-geojson"
+repository = "https://github.com/napari/napari-geojson"
 
 
 [project.entry-points."napari.manifest"]
