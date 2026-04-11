@@ -7,7 +7,7 @@ name = "napari-geojson"
 description = "Read and write geojson files in napari"
 readme = "README.md"
 license = "BSD-3-Clause"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 authors = [
     { name = "Tim Morello", email = "tdmorello@gmail.com" },
     { name = "napari team", email = "napari-steering-council@googlegroups.com" },
@@ -21,8 +21,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
