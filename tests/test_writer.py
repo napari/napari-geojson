@@ -1,7 +1,4 @@
-import geojson
-import pytest
-
-from napari_geojson import write_shapes
+"""Tests for the writer part of the plugin."""
 
 ellipse = [[[0, 0], [0, 5], [5, 5], [5, 0]], "ellipse", "Polygon"]
 line = [[[0, 0], [5, 5]], "line", "LineString"]

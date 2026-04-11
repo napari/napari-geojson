@@ -1,5 +1,6 @@
+"""Tests for the reader part of the plugin."""
+
 import numpy as np
-import pytest
 
 
 def test_read_feature_collection_test_data(read_test_data):
@@ -111,8 +112,16 @@ def test_polygon_with_hole_preserves_ring_structure(read_test_data):
         shapes[0],
         np.array(
             [
-                [0, 0], [0, 10], [10, 10], [10, 0], [0, 0],
-                [2, 2], [4, 2], [4, 4], [2, 4], [2, 2],
+                [0, 0],
+                [0, 10],
+                [10, 10],
+                [10, 0],
+                [0, 0],
+                [2, 2],
+                [4, 2],
+                [4, 4],
+                [2, 4],
+                [2, 2],
             ]
         ),
     )

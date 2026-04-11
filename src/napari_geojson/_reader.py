@@ -1,11 +1,13 @@
 """Read geojson files into napari."""
 
+from __future__ import annotations
+
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any
 
 import geojson
 import numpy as np
-from geojson.geometry import Geometry, Point, Polygon
+from geojson.geometry import Geometry, Polygon
 
 if TYPE_CHECKING:
     import napari  # pragma: no cover
@@ -22,7 +24,7 @@ def napari_get_reader(path):
     return reader_function
 
 
-def reader_function(path) -> List["napari.types.LayerDataTuple"]:
+def reader_function(path) -> list["napari.types.LayerDataTuple"]:
     """Take a path or list of paths and return a list of LayerData tuples."""
     # handle both a string and a list of strings
     paths = [path] if isinstance(path, str) else path
@@ -34,7 +36,7 @@ def reader_function(path) -> List["napari.types.LayerDataTuple"]:
 
 
 # TODO if all objects are point, load into points layer?
-def geojson_to_napari(fname: str) -> List[Tuple[Any, Dict, str]]:
+def geojson_to_napari(fname: str) -> list[tuple[Any, dict, str]]:
     """Convert geojson into napari shapes data."""
     with open(fname) as f:
         data = geojson.load(f)
@@ -85,12 +87,12 @@ def geojson_to_napari(fname: str) -> List[Tuple[Any, Dict, str]]:
     return layer_data
 
 
-def get_shape(geom: Geometry) -> List:
+def get_shape(geom: Geometry) -> list:
     """Return coordinates of shapes."""
     return get_coords(geom)
 
 
-def get_coords(geom: Geometry, flipxy=True) -> List:
+def get_coords(geom: Geometry, flipxy=True) -> list:
     """Return coordinates for geojson shapes."""
     coords = np.array(list(geojson.utils.coords(geom)))
     if flipxy:
@@ -98,7 +100,7 @@ def get_coords(geom: Geometry, flipxy=True) -> List:
     return coords
 
 
-def create_point_layer_data(collection) -> Tuple[Any, Dict, str]:
+def create_point_layer_data(collection) -> tuple[Any, dict, str]:
     pts = np.squeeze([get_shape(geom) for geom in collection])
     pt_properties = get_properties(collection)
     pt_meta = {"properties": pt_properties}

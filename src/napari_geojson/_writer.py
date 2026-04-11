@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Any
 
 import geojson
 from geojson.geometry import Geometry, LineString, MultiPoint, Polygon
 from napari.layers.shapes._shapes_models import Ellipse
 
 if TYPE_CHECKING:
-    DataType = Union[Any, Sequence[Any]]
-    FullLayerData = Tuple[DataType, dict, str]
+    from collections.abc import Sequence
+
+    DataType = Any | Sequence[Any]
+    FullLayerData = tuple[DataType, dict, str]
 
 
-def write_shapes(path: str, layer_data: List[Tuple[Any, Dict, str]]) -> str:
+def write_shapes(path: str, layer_data: list[tuple[Any, dict, str]]) -> str:
     """Write a single geojson file from napari shape layer data."""
     with open(path, "w") as fp:
         shapes = []
@@ -37,7 +39,7 @@ def write_shapes(path: str, layer_data: List[Tuple[Any, Dict, str]]) -> str:
 
 
 # TODO make explicit about how to change coordinates... it works for QuPath for now
-def flip_coords(geom: Geometry, flipxy=True) -> List:
+def flip_coords(geom: Geometry, flipxy=True) -> list:
     """Return coordinates for geojson shapes."""
     if geom["type"] == "Point":
         geom["coordinates"].reverse()
@@ -60,9 +62,7 @@ def format_qupath(shape, object_type="annotation", is_locked=False):
     return shape
 
 
-def get_geometry(
-    coords: List, shape_type: str, flipxy=True
-) -> Union[Polygon, LineString]:
+def get_geometry(coords: list, shape_type: str, flipxy=True) -> Polygon | LineString:
     """Get GeoJSON type geometry from napari shape."""
     if shape_type in ["rectangle", "polygon"]:
         shape = Polygon(coords)
@@ -77,12 +77,12 @@ def get_geometry(
     return shape
 
 
-def get_points(coords: List) -> MultiPoint:
+def get_points(coords: list) -> MultiPoint:
     """Get GeoJSON MultiPoints from napari points layer."""
     ...
 
 
-def ellipse_to_polygon(coords: List) -> List:
+def ellipse_to_polygon(coords: list) -> list:
     """Convert an ellipse to a polygon."""
     # TODO implement custom function
     # Hacky way to use napari's internal conversion
