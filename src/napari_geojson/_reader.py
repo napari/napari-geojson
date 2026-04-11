@@ -37,49 +37,50 @@ def reader_function(path) -> List["napari.types.LayerDataTuple"]:
 def geojson_to_napari(fname: str) -> List[Tuple[Any, Dict, str]]:
     """Convert geojson into napari shapes data."""
     with open(fname) as f:
-        collection = geojson.load(f)
+        data = geojson.load(f)
 
-    try:
-        if "features" in collection.keys():
-            collection = collection["features"]
-        elif "geometries" in collection.keys():
-            collection = collection["geometries"]
-    except AttributeError:
-        # already a list?
-        pass
+    if isinstance(data, geojson.FeatureCollection):
+        collection = data.features
+    elif isinstance(data, geojson.GeometryCollection):
+        collection = data.
+    # Note: this is not valid, but it's how the reader has been working
+    # TODO: validate input and output!
+    elif isinstance(data, (list, tuple)):
+        collection = data
+    else:
+        collection = [data]
 
     layer_data = []
 
-    # collection = [qupath_geom_conversion(geom) for geom in collection]
-    shape_types = [get_shape_type(geom) for geom in collection]
+    multi_point_geoms = []
+    point_geoms = []
+    shape_geoms = []
+    shape_types = []
+
+    for geom in collection:
+        shape_type = get_shape_type(geom)
+        if shape_type == "multipoint":
+            multi_point_geoms.append(geom)
+        elif shape_type == "points":
+            point_geoms.append(geom)
+        else:
+            shape_geoms.append(geom)
+            shape_types.append(shape_type)
 
     # create a point layer for each multipoint layer in the data
-    if "multipoint" in shape_types:
-        multi_pt_idxs = [
-            idx for idx, st in enumerate(shape_types) if st == "multipoint"
-        ]
-        # reverse so popping takes place in reverse order to not disturb indexing
-        multi_pt_idxs.reverse()
-        multi_pt_data = [
-            create_point_layer_data([collection.pop(idx)]) for idx in multi_pt_idxs
-        ]
-        layer_data.extend(multi_pt_data)
-        [shape_types.pop(idx) for idx in multi_pt_idxs]
-    # all singleton points to a single layer
-    if "points" in shape_types:
-        pt_idxs = [idx for idx, st in enumerate(shape_types) if st in "points"]
-        # reverse so popping takes place in reverse order to not disturb indexing
-        pt_idxs.reverse()
-        pt_collection = [collection.pop(idx) for idx in pt_idxs]
-        pt_data = create_point_layer_data(pt_collection)
-        layer_data.append(pt_data)
-        [shape_types.pop(idx) for idx in pt_idxs]
+    for geom in multi_point_geoms:
+        layer_data.append(create_point_layer_data([geom]))
 
-    shape_types = [get_shape_type(geom) for geom in collection]
-    shapes = [get_shape(geom) for geom in collection]
-    properties = get_properties(collection)
-    meta = {"shape_type": shape_types, "properties": properties}
-    layer_data.append((shapes, meta, "shapes"))
+    # all singleton points to a single layer
+    if point_geoms:
+        layer_data.append(create_point_layer_data(point_geoms))
+
+    # create a shape layer for all other shape geometries
+    if shape_geoms:
+        shapes = [get_shape(geom) for geom in shape_geoms]
+        properties = get_properties(shape_geoms)
+        meta = {"shape_type": shape_types, "properties": properties}
+        layer_data.append((shapes, meta, "shapes"))
 
     return layer_data
 
