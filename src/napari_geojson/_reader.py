@@ -42,9 +42,7 @@ def geojson_to_napari(fname: str) -> List[Tuple[Any, Dict, str]]:
     if isinstance(data, geojson.FeatureCollection):
         collection = data.features
     elif isinstance(data, geojson.GeometryCollection):
-        collection = data.
-    # Note: this is not valid, but it's how the reader has been working
-    # TODO: validate input and output!
+        collection = data.geometries
     elif isinstance(data, (list, tuple)):
         collection = data
     else:
