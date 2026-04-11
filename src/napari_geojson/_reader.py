@@ -43,6 +43,8 @@ def geojson_to_napari(fname: str) -> List[Tuple[Any, Dict, str]]:
         collection = data.features
     elif isinstance(data, geojson.GeometryCollection):
         collection = data.geometries
+    # TODO remove this
+    # this is handling invalid geojson which currently the plugin produces
     elif isinstance(data, (list, tuple)):
         collection = data
     else:
