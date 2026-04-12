@@ -31,6 +31,9 @@ def test_write_shapes_outputs_feature_collection(tmp_path):
         collection = geojson.load(fp)
 
     assert isinstance(collection, geojson.FeatureCollection)
-    assert [feature["geometry"]["type"] for feature in collection.features] == [
-        shape[2] for shape in sample_shapes
+    actual_geom_types = [
+        feature["geometry"]["type"] for feature in collection.features
     ]
+    expected_geom_types = [shape[2] for shape in sample_shapes]
+
+    assert actual_geom_types == expected_geom_types
