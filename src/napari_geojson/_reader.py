@@ -48,13 +48,14 @@ def geojson_to_napari(fname: str) -> list[tuple[Any, dict, str]]:
         collection = data.geometries
     elif isinstance(data, (geojson.Feature, Geometry)):
         collection = [data]
-    # TODO remove this
+    # NOTE: Invalid geojson will be removed in 0.2.0
     # this is handling invalid geojson which was produced before 0.1.5
     else:
         warnings.warn(
             (
-                "Invalid GeoJSON. Reading top-level GeoJSON values other than a Geometry, Feature, "
-                "FeatureCollection will be removed in 0.2.0 release. "
+                "Invalid GeoJSON. Reading a non-standard top-level GeoJSON value (supported for backward compatibility with pre-0.1.5 output). "
+                "Please use a Feature Collection, Geometry, or Feature. "
+                "This fallback behavior will be removed in v0.2.0. "
             ),
             FutureWarning,
             stacklevel=2,
