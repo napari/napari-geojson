@@ -34,7 +34,7 @@ def write_shapes(path: str, layer_data: list[tuple[Any, dict, str]]) -> str:
         # convert shapes into QuPath friendly format
         shapes = [format_qupath(s) for s in shapes]
 
-        geojson.dump(shapes, fp)
+        geojson.dump(geojson.FeatureCollection(shapes), fp)
         return fp.name
 
 
