@@ -64,7 +64,7 @@ def test_read_bare_feature_list_with_deprecation(read_test_data):
     """Reader emits warning for invalid top-level feature lists."""
     with pytest.warns(
         FutureWarning,
-        match="Invalid GeoJSON. Reading top-level GeoJSON values other than",
+        match="Invalid GeoJSON. Reading a non-standard top-level GeoJSON",
     ):
         layer_data_list = read_test_data("invalid_feature_list.geojson")
 
