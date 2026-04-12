@@ -1,33 +1,36 @@
 """Tests for the writer part of the plugin."""
 
-ellipse = [[[0, 0], [0, 5], [5, 5], [5, 0]], "ellipse", "Polygon"]
-line = [[[0, 0], [5, 5]], "line", "LineString"]
-polygon = [[[0, 0], [5, 5], [0, 10]], "polygon", "Polygon"]
-polyline = [[[0, 0], [5, 5], [0, 10]], "path", "LineString"]
-rectangle = [[[0, 0], [0, 5], [5, 5], [5, 0]], "rectangle", "Polygon"]
+import geojson
+import numpy as np
 
-sample_shapes = [ellipse, line, polygon, polyline, rectangle]
-sample_shapes_ids = ["ellipse", "line", "polygon", "polyline", "rectangle"]
+from napari_geojson._writer import write_shapes
+
+sample_shapes = [
+    ([[0, 0], [0, 5], [5, 5], [5, 0]], "ellipse", "Polygon"),
+    ([[0, 0], [5, 5]], "line", "LineString"),
+    ([[0, 0], [5, 5], [0, 10]], "polygon", "Polygon"),
+    ([[0, 0], [5, 5], [0, 10]], "path", "LineString"),
+    ([[0, 0], [0, 5], [5, 5], [5, 0]], "rectangle", "Polygon"),
+]
 
 
-# @pytest.mark.parametrize(
-#     "coords,shape_type,expected", sample_shapes, ids=sample_shapes_ids
-# )
-# def test_write_each_shape(
-#     make_napari_viewer, tmp_path, coords, shape_type, expected
-# ):  # noqa E501
-#     """Writer writes a shapes layer as GeoJSON."""
-#     fname = str(tmp_path / "sample.geojson")
-#     viewer = make_napari_viewer()
-#     shapes_layer = viewer.add_shapes(coords, shape_type=shape_type)
-#     # shape was written
-#     assert len(shapes_layer.data) == 1
+def test_write_shapes_outputs_feature_collection(tmp_path):
+    """Writer writes all shapes as a single GeoJSON FeatureCollection."""
+    fname = tmp_path / "sample.geojson"
+    layer_data = [
+        (
+            [np.array(shape[0]) for shape in sample_shapes],
+            {"shape_type": [shape[1] for shape in sample_shapes]},
+            "shapes",
+        )
+    ]
 
-#     data, meta, _ = shapes_layer.as_layer_data_tuple()
-#     write_shapes(fname, data, meta)
+    write_shapes(str(fname), layer_data)
 
-#     # read back
-#     with open(fname) as fp:
-#         collection = geojson.load(fp)
-#         geom = collection["geometries"][0]
-#         assert geom.type == expected
+    with open(fname) as fp:
+        collection = geojson.load(fp)
+
+    assert isinstance(collection, geojson.FeatureCollection)
+    assert [feature["geometry"]["type"] for feature in collection.features] == [
+        shape[2] for shape in sample_shapes
+    ]
