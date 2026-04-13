@@ -1,0 +1,22 @@
+[
+  {
+    "type": "Feature",
+    "geometry": {
+      "type": "Point",
+      "coordinates": [1, 2]
+    },
+    "properties": {
+      "name": "point-a"
+    }
+  },
+  {
+    "type": "Feature",
+    "geometry": {
+      "type": "Point",
+      "coordinates": [3, 4]
+    },
+    "properties": {
+      "name": "point-b"
+    }
+  }
+]

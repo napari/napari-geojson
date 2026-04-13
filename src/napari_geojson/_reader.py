@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
@@ -45,12 +46,21 @@ def geojson_to_napari(fname: str) -> list[tuple[Any, dict, str]]:
         collection = data.features
     elif isinstance(data, geojson.GeometryCollection):
         collection = data.geometries
-    # TODO remove this
-    # this is handling invalid geojson which currently the plugin produces
-    elif isinstance(data, (list, tuple)):
-        collection = data
-    else:
+    elif isinstance(data, (geojson.Feature, Geometry)):
         collection = [data]
+    # NOTE: Invalid geojson will be removed in 0.2.0
+    # this is handling invalid geojson which was produced before 0.1.5
+    else:
+        warnings.warn(
+            (
+                "Invalid GeoJSON. Reading a non-standard top-level GeoJSON value (supported for backward compatibility with pre-0.1.5 output). "
+                "Please use a Feature Collection, Geometry, or Feature. "
+                "This fallback behavior will be removed in v0.2.0. "
+            ),
+            FutureWarning,
+            stacklevel=2,
+        )
+        collection = data
 
     layer_data = []
 

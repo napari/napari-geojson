@@ -1,6 +1,7 @@
 """Tests for the reader part of the plugin."""
 
 import numpy as np
+import pytest
 
 
 def test_read_feature_collection_test_data(read_test_data):
@@ -45,6 +46,34 @@ def test_read_geometry_collection_test_data(read_test_data):
         shapes[1],
         np.array([[14, 13], [14, 15], [16, 15], [14, 13]]),
     )
+
+
+def test_read_single_feature_test_data_without_deprecation(read_test_data):
+    """Reader accepts a single valid top-level Feature."""
+    layer_data_list = read_test_data("single_feature.geojson")
+
+    assert [layer[2] for layer in layer_data_list] == ["points"]
+
+    points, point_meta, kind = layer_data_list[0]
+    assert kind == "points"
+    np.testing.assert_array_equal(points, np.array([2, 1]))
+    assert point_meta["properties"]["name"] == ["single-point"]
+
+
+def test_read_bare_feature_list_with_deprecation(read_test_data):
+    """Reader emits warning for invalid top-level feature lists."""
+    with pytest.warns(
+        FutureWarning,
+        match="Invalid GeoJSON. Reading a non-standard top-level GeoJSON",
+    ):
+        layer_data_list = read_test_data("invalid_feature_list.geojson")
+
+    assert [layer[2] for layer in layer_data_list] == ["points"]
+
+    points, point_meta, kind = layer_data_list[0]
+    assert kind == "points"
+    np.testing.assert_array_equal(points, np.array([[2, 1], [4, 3]]))
+    assert point_meta["properties"]["name"] == ["point-a", "point-b"]
 
 
 def test_read_qupath_geojson_test_data(read_test_data):
