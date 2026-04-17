@@ -22,7 +22,7 @@ def test_read_feature_collection_test_data(read_test_data):
     np.testing.assert_array_equal(shapes[0], np.array([[20, 10], [40, 30]]))
     np.testing.assert_array_equal(
         shapes[1],
-        np.array([[200, 100], [200, 110], [210, 110], [200, 100]]),
+        np.array([[200, 100], [200, 110], [210, 110]]),
     )
 
 
@@ -44,7 +44,7 @@ def test_read_geometry_collection_test_data(read_test_data):
     np.testing.assert_array_equal(shapes[0], np.array([[10, 9], [12, 11]]))
     np.testing.assert_array_equal(
         shapes[1],
-        np.array([[14, 13], [14, 15], [16, 15], [14, 13]]),
+        np.array([[14, 13], [14, 15], [16, 15]]),
     )
 
 
@@ -118,14 +118,7 @@ def test_read_3d_coordinates_reverse_axis_order(read_test_data):
     )
     np.testing.assert_array_equal(
         shapes[1],
-        np.array(
-            [
-                [60, 50, 40],
-                [60, 50, 41],
-                [61, 51, 41],
-                [60, 50, 40],
-            ]
-        ),
+        np.array([[60, 50, 40], [60, 50, 41], [61, 51, 41]]),
     )
 
 
