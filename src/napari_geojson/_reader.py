@@ -99,7 +99,18 @@ def geojson_to_napari(fname: str) -> list[tuple[Any, dict, str]]:
 
 def get_shape(geom: Geometry) -> list:
     """Return coordinates of shapes."""
-    return get_coords(geom)
+    coords = get_coords(geom)
+    # Strip closing coordinate for polygons
+    # GeoJSON requires closed rings per RFC 7946 §3.1.6
+    # but napari expects just vertex coordinates
+    geom_type = geom.geometry.type if geom.type == "Feature" else geom.type
+    if (
+        geom_type == "Polygon"
+        and len(coords) > 1
+        and np.array_equal(coords[0], coords[-1])
+    ):
+        coords = coords[:-1]
+    return coords
 
 
 def get_coords(geom: Geometry, flipxy=True) -> list:
