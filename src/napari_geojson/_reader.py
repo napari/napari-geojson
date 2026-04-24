@@ -36,7 +36,6 @@ def reader_function(path) -> list["napari.types.LayerDataTuple"]:
     return layer_data_tuples
 
 
-# TODO if all objects are point, load into points layer?
 def geojson_to_napari(fname: str) -> list[tuple[Any, dict, str]]:
     """Convert geojson into napari shapes data."""
     with open(fname) as f:
@@ -79,7 +78,7 @@ def geojson_to_napari(fname: str) -> list[tuple[Any, dict, str]]:
             shape_geoms.append(geom)
             shape_types.append(shape_type)
 
-    # create a point layer for each multipoint layer in the data
+    # create a point layer for each multipoint feature in the data
     for geom in multi_point_geoms:
         layer_data.append(create_point_layer_data([geom]))
 
@@ -87,9 +86,9 @@ def geojson_to_napari(fname: str) -> list[tuple[Any, dict, str]]:
     if point_geoms:
         layer_data.append(create_point_layer_data(point_geoms))
 
-    # create a shape layer for all other shape geometries
+    # create a single shape layer for all other shape geometries
     if shape_geoms:
-        shapes = [get_shape(geom) for geom in shape_geoms]
+        shapes = [get_coords(geom) for geom in shape_geoms]
         properties = get_properties(shape_geoms)
         meta = {"shape_type": shape_types, "properties": properties}
         layer_data.append((shapes, meta, "shapes"))
@@ -97,9 +96,13 @@ def geojson_to_napari(fname: str) -> list[tuple[Any, dict, str]]:
     return layer_data
 
 
-def get_shape(geom: Geometry) -> list:
-    """Return coordinates of shapes."""
-    coords = get_coords(geom)
+def get_coords(geom: Geometry) -> np.ndarray:
+    """Convert geojson geometry coordinates to napari numpy arrays.
+
+    GeoJSON is always in ZY(Z optional) order, but napari expects ZYX order,
+    so reverse the order of the last dimension of the coordinates.
+    """
+    coords = np.array(list(geojson.utils.coords(geom)))
     # Strip closing coordinate for polygons
     # GeoJSON requires closed rings per RFC 7946 §3.1.6
     # but napari expects just vertex coordinates
@@ -110,19 +113,15 @@ def get_shape(geom: Geometry) -> list:
         and np.array_equal(coords[0], coords[-1])
     ):
         coords = coords[:-1]
-    return coords
 
-
-def get_coords(geom: Geometry, flipxy=True) -> list:
-    """Return coordinates for geojson shapes."""
-    coords = np.array(list(geojson.utils.coords(geom)))
-    if flipxy:
-        coords = np.flip(coords, 1)
-    return coords
+    return coords[..., ::-1]
 
 
 def create_point_layer_data(collection) -> tuple[Any, dict, str]:
-    pts = np.squeeze([get_shape(geom) for geom in collection])
+    pts = np.concatenate(
+        [np.atleast_2d(get_coords(geom)) for geom in collection],
+        axis=0,
+    )
     pt_properties = get_properties(collection)
     pt_meta = {"properties": pt_properties}
     return (pts, pt_meta, "points")
@@ -130,7 +129,6 @@ def create_point_layer_data(collection) -> tuple[Any, dict, str]:
 
 def get_shape_type(geom: Geometry) -> str:
     """Translate geojson to napari shape notation."""
-    # QuPath stores 'type' under 'geometry'
     if geom.type == "Feature":
         geom_type = geom.geometry.type
     else:

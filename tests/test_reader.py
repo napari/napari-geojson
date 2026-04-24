@@ -56,7 +56,7 @@ def test_read_single_feature_test_data_without_deprecation(read_test_data):
 
     points, point_meta, kind = layer_data_list[0]
     assert kind == "points"
-    np.testing.assert_array_equal(points, np.array([2, 1]))
+    np.testing.assert_array_equal(points, np.array([[2, 1]]))
     assert point_meta["properties"]["name"] == ["single-point"]
 
 

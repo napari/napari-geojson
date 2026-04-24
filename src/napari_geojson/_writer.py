@@ -2,94 +2,70 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import geojson
-from geojson.geometry import Geometry, LineString, MultiPoint, Polygon
+import numpy as np
+from geojson.geometry import LineString, MultiPoint, Polygon
 from napari.layers.shapes._shapes_models import Ellipse
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    DataType = Any | Sequence[Any]
-    FullLayerData = tuple[DataType, dict, str]
+    from napari.types import FullLayerData
+    from numpy.typing import ArrayLike
 
 
-def write_shapes(path: str, layer_data: list[tuple[Any, dict, str]]) -> str:
-    """Write a single geojson file from napari shape layer data."""
+def write_shapes(path: str, layer_data: list[FullLayerData]) -> str:
+    """Write a single geojson file from napari shape and point layer data."""
     with open(path, "w") as fp:
-        shapes = []
+        features = []
         for layer in layer_data:
             data, meta, kind = layer
             if kind == "points":
-                shapes.append(MultiPoint([list(p) for p in data]))
+                points = np.atleast_2d(reverse_axis_order(data)).tolist()
+                features.append(
+                    geojson.Feature(geometry=MultiPoint(points), properties={})
+                )
             else:
-                shapes.extend(
+                features.extend(
                     [
-                        get_geometry(s.tolist(), t)
+                        geojson.Feature(geometry=get_geometry(s, t), properties={})
                         for s, t in zip(data, meta["shape_type"])  # noqa E501
                     ]
                 )
 
-        # convert shapes into QuPath friendly format
-        shapes = [format_qupath(s) for s in shapes]
-
-        geojson.dump(geojson.FeatureCollection(shapes), fp)
+        geojson.dump(geojson.FeatureCollection(features), fp)
         return fp.name
 
 
-# TODO make explicit about how to change coordinates... it works for QuPath for now
-def flip_coords(geom: Geometry, flipxy=True) -> list:
-    """Return coordinates for geojson shapes."""
-    if geom["type"] == "Point":
-        geom["coordinates"].reverse()
-        return geom
-    else:
-        for c in geom["coordinates"]:
-            c.reverse()
-    return geom
+def reverse_axis_order(coords: ArrayLike) -> np.ndarray:
+    """Reverse coordinate axis order along the last dimension.
+
+    Ensures that napari ZYX order is converted to GeoJSON XY(Z optional)
+    order.
+    """
+    return np.asarray(coords)[..., ::-1]
 
 
-def format_qupath(shape, object_type="annotation", is_locked=False):
-    """Convert to QuPath friendly object format."""
-    shape = {
-        "type": "Feature",
-        "geometry": shape,
-        "properties": {"object_type": object_type, "isLocked": is_locked},
-    }
-    if shape["geometry"]["type"] == "Polygon":
-        shape["geometry"]["coordinates"] = [shape["geometry"]["coordinates"]]
-    return shape
-
-
-def get_geometry(coords: list, shape_type: str, flipxy=True) -> Polygon | LineString:
-    """Get GeoJSON type geometry from napari shape."""
+def get_geometry(coords: ArrayLike, shape_type: str) -> Polygon | LineString:
+    """Convert napari coordinates to a GeoJSON geometry."""
     if shape_type in ["rectangle", "polygon"]:
         # Close the ring per GeoJSON spec (RFC 7946 §3.1.6)
-        if coords[0] != coords[-1]:
-            coords = coords + [coords[0]]
-        shape = Polygon(coords)
-    elif shape_type in ["line", "path"]:
-        shape = LineString(coords)
-    elif shape_type == "ellipse":
-        poly_coords = ellipse_to_polygon(coords)
-        if poly_coords[0] != poly_coords[-1]:
-            poly_coords = poly_coords + [poly_coords[0]]
-        shape = Polygon(poly_coords)
-    else:
-        raise ValueError(f"Shape type `{shape_type}` not supported.")
-    if flipxy:
-        shape = flip_coords(shape)
-    return shape
+        if not np.array_equal(coords[0], coords[-1]):
+            coords = np.vstack([coords, coords[0]])
+    if shape_type == "ellipse":
+        coords = ellipse_to_polygon(coords)
+
+    coords = reverse_axis_order(coords).tolist()
+
+    if shape_type in ["rectangle", "polygon", "ellipse"]:
+        return Polygon([coords])
+    if shape_type in ["line", "path"]:
+        return LineString(coords)
+    raise ValueError(f"Shape type `{shape_type}` not supported.")
 
 
-def get_points(coords: list) -> MultiPoint:
-    """Get GeoJSON MultiPoints from napari points layer."""
-    ...
-
-
-def ellipse_to_polygon(coords: list) -> list:
+def ellipse_to_polygon(coords: ArrayLike) -> np.ndarray:
     """Convert an ellipse to a polygon."""
     # TODO implement custom function
     # Hacky way to use napari's internal conversion
-    return Ellipse(coords)._edge_vertices.tolist()
+    return Ellipse(np.asarray(coords))._edge_vertices

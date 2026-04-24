@@ -9,13 +9,13 @@ sample_shapes = [
     ([[0, 0], [0, 5], [5, 5], [5, 0]], "ellipse", "Polygon"),
     ([[0, 0], [5, 5], [0, 10]], "polygon", "Polygon"),
     ([[0, 0], [0, 5], [5, 5], [5, 0]], "rectangle", "Polygon"),
-    ([[0, 0], [5, 5]], "line", "LineString"),
+    ([[0, 5], [5, 0]], "line", "LineString"),
     ([[0, 0], [5, 5], [0, 10]], "path", "LineString"),
 ]
 
 
 def test_write_shapes_outputs_feature_collection(tmp_path):
-    """Writer writes all shapes as a single GeoJSON FeatureCollection."""
+    """Writer writes standard GeoJSON Features inside one FeatureCollection."""
     fname = tmp_path / "sample.geojson"
     layer_data = [
         (
@@ -39,3 +39,11 @@ def test_write_shapes_outputs_feature_collection(tmp_path):
     for geom in collection.features[:-2]:
         coords = np.array(list(geojson.utils.coords(geom)))
         assert np.array_equal(coords[0], coords[-1])
+
+    # Verify GeoJSON coordinates are in XY (Z optional) order — reversed from napari ZYX
+    for shape, feature in zip(sample_shapes[-2:], collection.features[-2:]):
+        napari_coords = np.asarray(shape[0])
+        expected = napari_coords[..., ::-1]
+        actual = np.array(list(geojson.utils.coords(feature)))
+        assert actual.shape == expected.shape
+        assert np.array_equal(actual, expected)
