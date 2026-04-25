@@ -29,7 +29,7 @@ def write_shapes(path: str, layer_data: list[FullLayerData]) -> str:
                 features.extend(
                     [
                         geojson.Feature(geometry=get_geometry(s, t), properties={})
-                        for s, t in zip(data, meta["shape_type"])  # noqa E501
+                        for s, t in zip(data, meta["shape_type"])
                     ]
                 )
 
@@ -40,7 +40,7 @@ def write_shapes(path: str, layer_data: list[FullLayerData]) -> str:
 def reverse_axis_order(coords: ArrayLike) -> np.ndarray:
     """Reverse coordinate axis order along the last dimension.
 
-    Ensures that napari ZYX order is converted to GeoJSON XY(Z optional)
+    Ensures that napari (Z)YX order is converted to GeoJSON XY(Z optional)
     order.
     """
     return np.asarray(coords)[..., ::-1]
@@ -48,12 +48,13 @@ def reverse_axis_order(coords: ArrayLike) -> np.ndarray:
 
 def get_geometry(coords: ArrayLike, shape_type: str) -> Polygon | LineString:
     """Convert napari coordinates to a GeoJSON geometry."""
-    if shape_type in ["rectangle", "polygon"]:
+    if shape_type == "ellipse":
+        coords = ellipse_to_polygon(coords)
+
+    if shape_type in ["rectangle", "polygon", "ellipse"]:
         # Close the ring per GeoJSON spec (RFC 7946 §3.1.6)
         if not np.array_equal(coords[0], coords[-1]):
             coords = np.vstack([coords, coords[0]])
-    if shape_type == "ellipse":
-        coords = ellipse_to_polygon(coords)
 
     coords = reverse_axis_order(coords).tolist()
 

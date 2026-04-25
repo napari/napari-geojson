@@ -97,10 +97,11 @@ def geojson_to_napari(fname: str) -> list[tuple[Any, dict, str]]:
 
 
 def get_coords(geom: Geometry) -> np.ndarray:
-    """Convert geojson geometry coordinates to napari numpy arrays.
+    """Convert GeoJSON geometry coordinates to napari numpy arrays.
 
-    GeoJSON is always in ZY(Z optional) order, but napari expects ZYX order,
-    so reverse the order of the last dimension of the coordinates.
+    GeoJSON is always in XY(Z optional) order (longitude, latitude,
+    altitude), but napari expects ZYX order, so reverse the order of
+    the last dimension of the coordinates.
     """
     coords = np.array(list(geojson.utils.coords(geom)))
     # Strip closing coordinate for polygons
