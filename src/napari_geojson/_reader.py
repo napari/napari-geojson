@@ -102,6 +102,17 @@ def get_coords(geom: Geometry) -> np.ndarray:
     GeoJSON is always in XY(Z optional) order (longitude, latitude,
     altitude), but napari expects ZYX order, so reverse the order of
     the last dimension of the coordinates.
+
+    Parameters
+    ----------
+    geom : Geometry
+        GeoJSON geometry object, which has coordinates in longitude,
+        latitude, altitude order, corresponding to XY(Z optional).
+
+    Returns
+    -------
+    np.ndarray
+        An array of coordinates in ZYX order, suitable for napari.
     """
     coords = np.array(list(geojson.utils.coords(geom)))
     # Strip closing coordinate for polygons
