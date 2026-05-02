@@ -3,7 +3,7 @@
 import geojson
 import numpy as np
 
-from napari_geojson._writer import write_shapes
+from napari_geojson._writer import linear_ring_orientation, write_shapes
 
 sample_shapes = [
     ([[0, 0], [0, 5], [5, 5], [5, 0]], "ellipse", "Polygon"),
@@ -68,3 +68,37 @@ def test_write_points_outputs_multipoint_feature(tmp_path):
         np.asarray(feature["geometry"]["coordinates"]),
         points[..., ::-1],
     )
+
+
+def test_write_polygon_with_hole(tmp_path):
+    """Writer writes valid GeoJSON polygon with an exterior ring and interior hole per RFC 7946.
+
+    Exterior ring should be counterclockwise and hole should be clockwise in GeoJSON XY space, regardless of the order of vertices in the napari input.
+    """
+    fname = tmp_path / "polygon_with_hole_oriented.geojson"
+    polygon = np.array(
+        [
+            [0, 0],
+            [10, 0],
+            [10, 10],
+            [0, 10],
+            [0, 0],
+            [2, 2],
+            [2, 4],
+            [4, 4],
+            [4, 2],
+            [2, 2],
+        ]
+    )
+    layer_data = [([polygon], {"shape_type": ["polygon"]}, "shapes")]
+
+    write_shapes(str(fname), layer_data)
+
+    with open(fname) as fp:
+        collection = geojson.load(fp)
+
+    exterior, hole = [
+        np.asarray(ring) for ring in collection.features[0]["geometry"]["coordinates"]
+    ]
+    assert linear_ring_orientation(exterior)
+    assert not linear_ring_orientation(hole)
