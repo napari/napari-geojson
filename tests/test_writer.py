@@ -1,9 +1,18 @@
 """Tests for the writer part of the plugin."""
 
+import warnings
+
 import geojson
 import numpy as np
+import pytest
 
-from napari_geojson._writer import linear_ring_orientation, write_shapes
+from napari_geojson._writer import (
+    _close_linear_ring,
+    _linear_ring_orientation,
+    _orient_linear_ring,
+    _split_rings,
+    write_shapes,
+)
 
 sample_shapes = [
     ([[0, 0], [0, 5], [5, 5], [5, 0]], "ellipse", "Polygon"),
@@ -100,5 +109,102 @@ def test_write_polygon_with_hole(tmp_path):
     exterior, hole = [
         np.asarray(ring) for ring in collection.features[0]["geometry"]["coordinates"]
     ]
-    assert linear_ring_orientation(exterior)
-    assert not linear_ring_orientation(hole)
+    assert _linear_ring_orientation(exterior)
+    assert not _linear_ring_orientation(hole)
+
+
+def test_split_rings_ignores_trailing_path_terminator():
+    """Split rings should ignore a final path closing vertex."""
+    polygon = np.array(
+        [
+            [0, 0],
+            [3, 0],
+            [3, 3],
+            [0, 3],
+            [0, 0],
+            [1, 1],
+            [2, 1],
+            [2, 2],
+            [1, 2],
+            [1, 1],
+            [0, 0],
+        ]
+    )
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        exterior, hole = _split_rings(polygon)
+
+    assert not caught
+
+    np.testing.assert_array_equal(
+        exterior,
+        np.array([[0, 0], [3, 0], [3, 3], [0, 3], [0, 0]]),
+    )
+    np.testing.assert_array_equal(
+        hole,
+        np.array([[1, 1], [2, 1], [2, 2], [1, 2], [1, 1]]),
+    )
+
+
+def test_close_linear_ring_rejects_three_position_closed_ring():
+    """Close ring should reject already-closed rings with only three positions."""
+    ring = np.array([[0, 0], [1, 0], [0, 0]])
+
+    with pytest.raises(ValueError, match="at least four positions"):
+        _close_linear_ring(ring)
+
+
+@pytest.mark.parametrize("exterior", [True, False])
+def test_orient_linear_ring_orients_closed_ring(exterior):
+    """Orient ring should preserve closure and apply the requested winding."""
+    ring = np.array([[0, 0], [0, 1], [1, 0], [0, 0]])
+
+    oriented = _orient_linear_ring(ring, exterior=exterior)
+
+    np.testing.assert_array_equal(oriented[0], oriented[-1])
+    assert len(oriented) == 4
+    assert _linear_ring_orientation(oriented) == exterior
+
+
+@pytest.mark.parametrize(
+    "trailing_vertices",
+    [
+        np.array([[0, 4]]),
+        np.array([[0, 4], [1, 5]]),
+        np.array([[0, 4], [1, 5], [2, 4]]),
+    ],
+)
+def test_split_rings_warns_and_trims_trailing_vertices(trailing_vertices):
+    """Split rings should warn and trim trailing vertices after closed rings."""
+    polygon = np.vstack(
+        [
+            np.array(
+                [
+                    [0, 0],
+                    [3, 0],
+                    [3, 3],
+                    [0, 3],
+                    [0, 0],
+                    [1, 1],
+                    [2, 1],
+                    [2, 2],
+                    [1, 2],
+                    [1, 1],
+                ]
+            ),
+            trailing_vertices,
+        ]
+    )
+
+    with pytest.warns(UserWarning, match="Ignoring trailing polygon vertices"):
+        exterior, hole = _split_rings(polygon)
+
+    np.testing.assert_array_equal(
+        exterior,
+        np.array([[0, 0], [3, 0], [3, 3], [0, 3], [0, 0]]),
+    )
+    np.testing.assert_array_equal(
+        hole,
+        np.array([[1, 1], [2, 1], [2, 2], [1, 2], [1, 1]]),
+    )

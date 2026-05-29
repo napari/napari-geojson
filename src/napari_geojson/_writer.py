@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import geojson
@@ -21,14 +22,14 @@ def write_shapes(path: str, layer_data: list[FullLayerData]) -> str:
         for layer in layer_data:
             data, meta, kind = layer
             if kind == "points":
-                points = np.atleast_2d(reverse_axis_order(data)).tolist()
+                points = np.atleast_2d(_reverse_axis_order(data)).tolist()
                 features.append(
                     geojson.Feature(geometry=MultiPoint(points), properties={})
                 )
             else:
                 features.extend(
                     [
-                        geojson.Feature(geometry=get_geometry(s, t), properties={})
+                        geojson.Feature(geometry=_get_geometry(s, t), properties={})
                         for s, t in zip(data, meta["shape_type"])
                     ]
                 )
@@ -37,7 +38,7 @@ def write_shapes(path: str, layer_data: list[FullLayerData]) -> str:
         return fp.name
 
 
-def reverse_axis_order(coords: ArrayLike) -> np.ndarray:
+def _reverse_axis_order(coords: ArrayLike) -> np.ndarray:
     """Reverse coordinate axis order along the last dimension.
 
     Ensures that napari (Z)YX order is converted to GeoJSON XY(Z optional)
@@ -46,16 +47,16 @@ def reverse_axis_order(coords: ArrayLike) -> np.ndarray:
     return np.asarray(coords)[..., ::-1]
 
 
-def get_geometry(coords: ArrayLike, shape_type: str) -> Polygon | LineString:
+def _get_geometry(coords: ArrayLike, shape_type: str) -> Polygon | LineString:
     """Convert napari coordinates to a GeoJSON geometry."""
     if shape_type == "ellipse":
-        coords = ellipse_to_polygon(coords)
+        coords = _ellipse_to_polygon(coords)
         return Polygon(coords.tolist())
 
     if shape_type in ["rectangle", "polygon"]:
         return Polygon([ring.tolist() for ring in get_polygon_rings(coords)])
 
-    coords = reverse_axis_order(coords).tolist()
+    coords = _reverse_axis_order(coords).tolist()
 
     if shape_type in ["line", "path"]:
         return LineString(coords)
@@ -70,48 +71,79 @@ def get_polygon_rings(coords: ArrayLike) -> list[np.ndarray]:
     GeoJSON requires separate linear rings: exterior first, then holes.
     """
     coords = np.atleast_2d(np.asarray(coords))
-    rings = _split_rings(coords)
-    geojson_rings = [reverse_axis_order(ring) for ring in rings]
-    exterior, *holes = geojson_rings
-    return [orient_linear_ring(exterior, exterior=True)] + [
-        orient_linear_ring(ring, exterior=False) for ring in holes
+    return [
+        _orient_linear_ring(_reverse_axis_order(ring), exterior=index == 0)
+        for index, ring in enumerate(_split_rings(coords))
     ]
 
 
 def _split_rings(coords: np.ndarray) -> list[np.ndarray]:
-    """Split a flat vertex array into individual closed linear rings."""
+    """Split a flat vertex array into individual closed linear rings.
+
+    napari stores polygons with holes as a flat list of vertices where each
+    closed ring repeats its first vertex.
+    If no ring terminator is present, the full array is treated as a single ring.
+    After a series of rings, an optional path terminator may be present, but is
+    silently trimmed.
+    Any other trailing vertices are trimmed with a warning because they do not define a
+    valid ring and result in bizarre output that is also not valid GeoJSON. See:
+    https://github.com/napari/napari/issues/9013
+    """
     rings = []
     start = 0
     for end in range(1, len(coords)):
         if end - start >= 3 and np.array_equal(coords[end], coords[start]):
-            rings.append(close_linear_ring(coords[start : end + 1]))
+            rings.append(_close_linear_ring(coords[start : end + 1]))
             start = end + 1
-    if start < len(coords):
-        rings.append(close_linear_ring(coords[start:]))
+
+    remainder = coords[start:]
+    # all rings closed
+    if len(remainder) == 0:
+        return rings
+    # no closed rings, so treat as single ring and close it
+    if not rings:
+        return [_close_linear_ring(remainder)]
+    # path-closing vertex present, silently ignore it
+    if len(remainder) == 1 and np.array_equal(remainder[0], rings[0][0]):
+        return rings
+    # Extra invalid vertices present
+    warnings.warn(
+        (
+            "Ignoring trailing polygon vertices after closed rings because "
+            "they do not form a valid GeoJSON linear ring."
+        ),
+        UserWarning,
+        stacklevel=2,
+    )
     return rings
 
 
-def close_linear_ring(coords: np.ndarray) -> np.ndarray:
-    """Ensure ring is explicitly closed as per GeoJSON spec (RFC 7946 §3.1.6)."""
+def _close_linear_ring(coords: np.ndarray) -> np.ndarray:
+    """Return a valid GeoJSON linear ring, closing it if needed."""
+    coords = np.atleast_2d(np.asarray(coords))
+    # Check if already closed
+    if np.array_equal(coords[0], coords[-1]):
+        if len(coords) < 4:
+            raise ValueError("GeoJSON linear rings require at least four positions.")
+        return coords
+
     if len(coords) < 3:
         raise ValueError("Polygon rings require at least three coordinates.")
-    if not np.array_equal(coords[0], coords[-1]):
-        coords = np.vstack([coords, coords[0]])
-    return coords
+
+    return np.vstack([coords, coords[0]])
 
 
-def orient_linear_ring(coords: np.ndarray, exterior: bool) -> np.ndarray:
-    """Orient a GeoJSON linear ring to match requirement of RFC 7946 §3.1.6.
+def _orient_linear_ring(coords: np.ndarray, exterior: bool) -> np.ndarray:
+    """Orient a valid GeoJSON linear ring per RFC 7946 §3.1.6.
 
     In GeoJSON, the exterior ring of a polygon must be counterclockwise
     and holes must be clockwise.
     """
-    orientation = linear_ring_orientation(coords)
-
+    orientation = _linear_ring_orientation(coords)
     return coords if orientation == exterior else coords[::-1]
 
 
-def linear_ring_orientation(coords: np.ndarray) -> bool:
+def _linear_ring_orientation(coords: np.ndarray) -> bool:
     """Return the orientation of a closed linear ring in GeoJSON XY space.
 
     Uses the shoelace formula to compute the signed area:
@@ -129,7 +161,7 @@ def linear_ring_orientation(coords: np.ndarray) -> bool:
     return signed_area > 0
 
 
-def ellipse_to_polygon(coords: ArrayLike) -> np.ndarray:
+def _ellipse_to_polygon(coords: ArrayLike) -> np.ndarray:
     """Convert an ellipse to a polygon."""
     # TODO implement custom function
     # Hacky way to use napari's internal conversion
