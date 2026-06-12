@@ -51,10 +51,10 @@ def _get_geometry(coords: ArrayLike, shape_type: str) -> Polygon | LineString:
     """Convert napari coordinates to a GeoJSON geometry."""
     if shape_type == "ellipse":
         coords = _ellipse_to_polygon(coords)
-        return Polygon(coords.tolist())
+        return Polygon([_reverse_axis_order(coords).tolist()])
 
     if shape_type in ["rectangle", "polygon"]:
-        return Polygon([ring.tolist() for ring in get_polygon_rings(coords)])
+        return Polygon([ring.tolist() for ring in _get_polygon_rings(coords)])
 
     coords = _reverse_axis_order(coords).tolist()
 
@@ -63,12 +63,11 @@ def _get_geometry(coords: ArrayLike, shape_type: str) -> Polygon | LineString:
     raise ValueError(f"Shape type `{shape_type}` not supported.")
 
 
-def get_polygon_rings(coords: ArrayLike) -> list[np.ndarray]:
-    """Convert flat napari polygon vertices into GeoJSON linear rings.
+def _get_polygon_rings(coords: ArrayLike) -> list[np.ndarray]:
+    """Convert flat napari polygon vertices into oriented GeoJSON linear rings.
 
-    For polygons with holes, napari represents a polygon as a flat array of
-    vertices where each ring is terminated by repeating the first vertex.
-    GeoJSON requires separate linear rings: exterior first, then holes.
+    Splits the flat napari vertex array into rings, converts each to XY order, and
+    orients them per RFC 7946: exterior ring first, then any holes.
     """
     coords = np.atleast_2d(np.asarray(coords))
     return [
@@ -120,17 +119,14 @@ def _split_rings(coords: np.ndarray) -> list[np.ndarray]:
 
 def _close_linear_ring(coords: np.ndarray) -> np.ndarray:
     """Return a valid GeoJSON linear ring, closing it if needed."""
-    coords = np.atleast_2d(np.asarray(coords))
-    # Check if already closed
-    if np.array_equal(coords[0], coords[-1]):
-        if len(coords) < 4:
-            raise ValueError("GeoJSON linear rings require at least four positions.")
-        return coords
-
-    if len(coords) < 3:
-        raise ValueError("Polygon rings require at least three coordinates.")
-
-    return np.vstack([coords, coords[0]])
+    coords = np.asarray(coords)
+    if not np.array_equal(coords[0], coords[-1]):
+        coords = np.vstack([coords, coords[0]])
+    # A valid ring needs at least three distinct vertices plus the closing
+    # repeat of the first, i.e. four positions (RFC 7946 §3.1.6).
+    if len(coords) < 4:
+        raise ValueError("GeoJSON linear rings require at least four positions.")
+    return coords
 
 
 def _orient_linear_ring(coords: np.ndarray, exterior: bool) -> np.ndarray:

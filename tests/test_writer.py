@@ -8,6 +8,7 @@ import pytest
 
 from napari_geojson._writer import (
     _close_linear_ring,
+    _ellipse_to_polygon,
     _linear_ring_orientation,
     _orient_linear_ring,
     _split_rings,
@@ -77,6 +78,33 @@ def test_write_points_outputs_multipoint_feature(tmp_path):
         np.asarray(feature["geometry"]["coordinates"]),
         points[..., ::-1],
     )
+
+
+def test_write_ellipse_outputs_single_xy_ring(tmp_path):
+    """Ellipse writes one linear ring in GeoJSON XY order.
+
+    Uses an asymmetric bounding box so XY differs from napari's YX order.
+    """
+    fname = tmp_path / "ellipse.geojson"
+    # napari YX bounding box: axis0 (rows) span 0-10, axis1 (cols) span 0-4
+    ellipse = np.array([[0, 0], [0, 4], [10, 4], [10, 0]])
+    layer_data = [([ellipse], {"shape_type": ["ellipse"]}, "shapes")]
+
+    write_shapes(str(fname), layer_data)
+
+    with open(fname) as fp:
+        collection = geojson.load(fp)
+
+    coordinates = collection.features[0]["geometry"]["coordinates"]
+    # A single linear ring, not one ring per vertex
+    assert len(coordinates) == 1
+    ring = np.asarray(coordinates[0])
+    # Output is the ellipse polygon with napari YX reversed to GeoJSON XY
+    # (atol accounts for geojson rounding coordinates on serialization).
+    expected = _ellipse_to_polygon(ellipse)[:, ::-1]
+    np.testing.assert_allclose(ring, expected, atol=1e-6)
+    # closed ring
+    np.testing.assert_array_equal(ring[0], ring[-1])
 
 
 def test_write_polygon_with_hole(tmp_path):
