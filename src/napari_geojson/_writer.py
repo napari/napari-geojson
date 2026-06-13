@@ -50,6 +50,7 @@ def _reverse_axis_order(coords: ArrayLike) -> np.ndarray:
 def _get_geometry(coords: ArrayLike, shape_type: str) -> Polygon | LineString:
     """Convert napari coordinates to a GeoJSON geometry."""
     if shape_type == "ellipse":
+        # Ellipse handling will be reworked, see #21
         coords = _ellipse_to_polygon(coords)
         return Polygon([_reverse_axis_order(coords).tolist()])
 
@@ -66,12 +67,12 @@ def _get_geometry(coords: ArrayLike, shape_type: str) -> Polygon | LineString:
 def _get_polygon_rings(coords: ArrayLike) -> list[np.ndarray]:
     """Convert flat napari polygon vertices into oriented GeoJSON linear rings.
 
-    Splits the flat napari vertex array into rings, converts each to XY order, and
+    Converts the flat vertex array to XY order, splits it into rings, and
     orients them per RFC 7946: exterior ring first, then any holes.
     """
-    coords = np.atleast_2d(np.asarray(coords))
+    coords = _reverse_axis_order(np.atleast_2d(coords))
     return [
-        _orient_linear_ring(_reverse_axis_order(ring), exterior=index == 0)
+        _orient_linear_ring(ring, exterior=index == 0)
         for index, ring in enumerate(_split_rings(coords))
     ]
 

@@ -23,6 +23,11 @@ sample_shapes = [
     ([[0, 0], [5, 5], [0, 10]], "path", "LineString"),
 ]
 
+# Closed exterior ring and hole shared by the _split_rings trailing-vertex tests.
+EXTERIOR_RING = np.array([[0, 0], [3, 0], [3, 3], [0, 3], [0, 0]])
+HOLE_RING = np.array([[1, 1], [2, 1], [2, 2], [1, 2], [1, 1]])
+POLYGON_WITH_HOLE = np.vstack([EXTERIOR_RING, HOLE_RING])
+
 
 def test_write_shapes_outputs_feature_collection(tmp_path):
     """Writer writes standard GeoJSON Features inside one FeatureCollection."""
@@ -143,21 +148,7 @@ def test_write_polygon_with_hole(tmp_path):
 
 def test_split_rings_ignores_trailing_path_terminator():
     """Split rings should ignore a final path closing vertex."""
-    polygon = np.array(
-        [
-            [0, 0],
-            [3, 0],
-            [3, 3],
-            [0, 3],
-            [0, 0],
-            [1, 1],
-            [2, 1],
-            [2, 2],
-            [1, 2],
-            [1, 1],
-            [0, 0],
-        ]
-    )
+    polygon = np.vstack([POLYGON_WITH_HOLE, [0, 0]])
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
@@ -165,14 +156,8 @@ def test_split_rings_ignores_trailing_path_terminator():
 
     assert not caught
 
-    np.testing.assert_array_equal(
-        exterior,
-        np.array([[0, 0], [3, 0], [3, 3], [0, 3], [0, 0]]),
-    )
-    np.testing.assert_array_equal(
-        hole,
-        np.array([[1, 1], [2, 1], [2, 2], [1, 2], [1, 1]]),
-    )
+    np.testing.assert_array_equal(exterior, EXTERIOR_RING)
+    np.testing.assert_array_equal(hole, HOLE_RING)
 
 
 def test_close_linear_ring_rejects_three_position_closed_ring():
@@ -205,34 +190,10 @@ def test_orient_linear_ring_orients_closed_ring(exterior):
 )
 def test_split_rings_warns_and_trims_trailing_vertices(trailing_vertices):
     """Split rings should warn and trim trailing vertices after closed rings."""
-    polygon = np.vstack(
-        [
-            np.array(
-                [
-                    [0, 0],
-                    [3, 0],
-                    [3, 3],
-                    [0, 3],
-                    [0, 0],
-                    [1, 1],
-                    [2, 1],
-                    [2, 2],
-                    [1, 2],
-                    [1, 1],
-                ]
-            ),
-            trailing_vertices,
-        ]
-    )
+    polygon = np.vstack([POLYGON_WITH_HOLE, trailing_vertices])
 
     with pytest.warns(UserWarning, match="Ignoring trailing polygon vertices"):
         exterior, hole = _split_rings(polygon)
 
-    np.testing.assert_array_equal(
-        exterior,
-        np.array([[0, 0], [3, 0], [3, 3], [0, 3], [0, 0]]),
-    )
-    np.testing.assert_array_equal(
-        hole,
-        np.array([[1, 1], [2, 1], [2, 2], [1, 2], [1, 1]]),
-    )
+    np.testing.assert_array_equal(exterior, EXTERIOR_RING)
+    np.testing.assert_array_equal(hole, HOLE_RING)
